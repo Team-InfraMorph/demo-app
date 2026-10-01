@@ -16,7 +16,7 @@ function asyncRoute(handler) {
 }
 
 app.get("/", (req, res) => {
-  res.type("text/plain").send("InfraMorph demo v1");
+  res.type("text/plain").send("InfraMorph demo v1 - updated copy");
 });
 
 app.get("/health", asyncRoute(async (req, res) => {
