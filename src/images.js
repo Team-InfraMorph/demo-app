@@ -1,28 +1,55 @@
-const fs = require("node:fs/promises");
-const path = require("node:path");
 const { randomUUID } = require("node:crypto");
+const {
+  GetObjectCommand,
+  NoSuchKey,
+  PutObjectCommand,
+  S3Client,
+} = require("@aws-sdk/client-s3");
 
-const uploadDir = path.join(process.cwd(), "uploads");
+const bucket = process.env.STORAGE_BUCKET;
+const client = new S3Client({ region: process.env.AWS_REGION });
+const validKey =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg)$/;
+
+function requireBucket() {
+  if (!bucket) {
+    throw new Error("STORAGE_BUCKET is required");
+  }
+}
 
 async function saveImage(buffer, extension) {
-  await fs.mkdir(uploadDir, { recursive: true });
+  requireBucket();
   const key = `${randomUUID()}.${extension}`;
-  await fs.writeFile(path.join(uploadDir, key), buffer);
+  await client.send(new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: buffer,
+    ContentType: extension === "png" ? "image/png" : "image/jpeg",
+  }));
   return key;
 }
 
 async function readImage(key) {
-  const validKey =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg)$/;
-
+  requireBucket();
   if (!validKey.test(key)) {
     return null;
   }
 
   try {
-    return await fs.readFile(path.join(uploadDir, key));
+    const result = await client.send(new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    }));
+    if (!result.Body) {
+      return null;
+    }
+    return Buffer.from(await result.Body.transformToByteArray());
   } catch (error) {
-    if (error.code === "ENOENT") {
+    if (
+      error instanceof NoSuchKey ||
+      error.name === "NoSuchKey" ||
+      error.$metadata?.httpStatusCode === 404
+    ) {
       return null;
     }
     throw error;
