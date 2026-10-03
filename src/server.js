@@ -15,9 +15,7 @@ function asyncRoute(handler) {
   };
 }
 
-app.get("/", (req, res) => {
-  res.type("text/plain").send("InfraMorph demo v1");
-});
+app.use(express.static(require("path").join(__dirname, "web"), { dotfiles: "deny" }));
 
 app.get("/health", asyncRoute(async (req, res) => {
   await prisma.note.count();
