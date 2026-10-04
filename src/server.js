@@ -16,79 +16,9 @@ function asyncRoute(handler) {
   };
 }
 
-function calculationResponse(calculation) {
-  return {
-    id: calculation.id,
-    number: calculation.input,
-    calculatedValue: calculation.result,
-    status: calculation.status,
-    error: calculation.error,
-    updatedAt: calculation.updatedAt,
-  };
-}
 
-app.get("/", (req, res) => {
-  res.type("html").send(`<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>InfraMorph Worker Demo</title>
-  <style>
-    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #eef2ff; color: #172554; }
-    main { width: min(560px, calc(100% - 32px)); padding: 32px; border-radius: 20px; background: white; box-shadow: 0 18px 50px rgba(30, 64, 175, .16); }
-    h1 { margin: 0 0 8px; font-size: 28px; }
-    p { color: #475569; }
-    label { display: block; margin: 18px 0 6px; font-weight: 700; }
-    input { box-sizing: border-box; width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font: inherit; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
-    button { padding: 12px; border: 0; border-radius: 10px; font: inherit; font-weight: 700; cursor: pointer; }
-    #save { background: #2563eb; color: white; }
-    #calculate { background: #dbeafe; color: #1d4ed8; }
-    pre { min-height: 72px; margin: 20px 0 0; padding: 14px; overflow: auto; border-radius: 10px; background: #0f172a; color: #e2e8f0; }
-  </style>
-</head>
-<body>
-  <main>
-    <h1>Worker ×2 계산 데모</h1>
-    <p>작업을 저장하면 private worker가 계산해서 PostgreSQL에 기록합니다.</p>
-    <label for="calculation-id">ID</label>
-    <input id="calculation-id" maxlength="64" placeholder="예: order-1001">
-    <label for="number">숫자</label>
-    <input id="number" type="number" step="1" placeholder="예: 21">
-    <div class="actions">
-      <button id="save" type="button">×2 작업 저장</button>
-      <button id="calculate" type="button">계산 결과 조회</button>
-    </div>
-    <pre id="result">ID와 숫자를 입력하세요.</pre>
-  </main>
-  <script>
-    const idInput = document.getElementById("calculation-id");
-    const numberInput = document.getElementById("number");
-    const result = document.getElementById("result");
+app.use(express.static(require("path").join(__dirname, "web"), { dotfiles: "deny" }));
 
-    function show(value) {
-      result.textContent = JSON.stringify(value, null, 2);
-    }
-
-    document.getElementById("save").addEventListener("click", async () => {
-      const response = await fetch("/api/calculations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: idInput.value, number: Number(numberInput.value) }),
-      });
-      show(await response.json());
-    });
-
-    document.getElementById("calculate").addEventListener("click", async () => {
-      const response = await fetch("/api/calculations/" + encodeURIComponent(idInput.value.trim()));
-      show(await response.json());
-    });
-  </script>
-</body>
-</html>`);
-});
 
 app.get("/health", asyncRoute(async (req, res) => {
   await prisma.note.count();
@@ -177,17 +107,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT must be between 1 and 65535");
 }
 
-const server = app.listen(port, "0.0.0.0", () => {
-  console.log(`demo-app web listening on ${port}`);
+
+app.listen(port, "0.0.0.0", () => {
+  console.log(`demo-app listening on ${port}`);
 });
-
-async function shutdown(signal) {
-  console.log(`received ${signal}; shutting down`);
-  server.close(async () => {
-    await prisma.$disconnect();
-    process.exit(0);
-  });
-}
-
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
