@@ -6,6 +6,7 @@ const { saveImage, readImage } = require("./images");
 
 const app = express();
 const prisma = new PrismaClient();
+const calculationIdPattern = /^[A-Za-z0-9_-]{1,64}$/;
 
 app.use(express.json({ limit: "16kb" }));
 
@@ -15,11 +16,39 @@ function asyncRoute(handler) {
   };
 }
 
+
 app.use(express.static(require("path").join(__dirname, "web"), { dotfiles: "deny" }));
+
 
 app.get("/health", asyncRoute(async (req, res) => {
   await prisma.note.count();
   res.json({ status: "ok" });
+}));
+
+app.post("/api/calculations", asyncRoute(async (req, res) => {
+  const id = typeof req.body?.id === "string" ? req.body.id.trim() : "";
+  const number = req.body?.number;
+  if (!calculationIdPattern.test(id)) {
+    return res.status(400).json({ error: "id must contain 1-64 letters, digits, underscores, or hyphens" });
+  }
+  if (!Number.isInteger(number) || number < -1073741824 || number > 1073741823) {
+    return res.status(400).json({ error: "number must be an integer whose doubled value fits PostgreSQL INTEGER" });
+  }
+
+  const calculation = await prisma.calculation.upsert({
+    where: { id },
+    create: { id, input: number, status: "PENDING" },
+    update: { input: number, result: null, status: "PENDING", error: null },
+  });
+  res.status(202).json(calculationResponse(calculation));
+}));
+
+app.get("/api/calculations/:id", asyncRoute(async (req, res) => {
+  const calculation = await prisma.calculation.findUnique({ where: { id: req.params.id } });
+  if (!calculation) {
+    return res.status(404).json({ error: "calculation not found" });
+  }
+  res.json(calculationResponse(calculation));
 }));
 
 app.post("/api/notes", asyncRoute(async (req, res) => {
@@ -28,16 +57,12 @@ app.post("/api/notes", asyncRoute(async (req, res) => {
     return res.status(400).json({ error: "text must contain 1-500 characters" });
   }
 
-  const note = await prisma.note.create({
-    data: { text: text.trim() },
-  });
+  const note = await prisma.note.create({ data: { text: text.trim() } });
   res.status(201).json(note);
 }));
 
 app.get("/api/notes", asyncRoute(async (req, res) => {
-  const notes = await prisma.note.findMany({
-    orderBy: { id: "desc" },
-  });
+  const notes = await prisma.note.findMany({ orderBy: { id: "desc" } });
   res.json(notes);
 }));
 
@@ -81,6 +106,7 @@ const port = Number(process.env.PORT || 3000);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT must be between 1 and 65535");
 }
+
 
 app.listen(port, "0.0.0.0", () => {
   console.log(`demo-app listening on ${port}`);

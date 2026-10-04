@@ -4,6 +4,7 @@ const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
+
 async function tick() {
   try {
     const noteCount = await prisma.note.count();

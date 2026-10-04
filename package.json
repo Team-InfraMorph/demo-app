@@ -1,12 +1,10 @@
 {
   "name": "demo-app",
   "version": "1.0.0",
-  "description": "개발을 시작하기 전에 [협업 규칙 및 Git 훅 설치](CONTRIBUTING.md)를 확인하세요.",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
+  "private": true,
+  "description": "InfraMorph demo app web and worker API",
   "scripts": {
+
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node src/server.js",
     "worker": "node src/worker.js"
@@ -14,18 +12,18 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Team-InfraMorph/demo-app.git"
+
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Team-InfraMorph/demo-app/issues"
-  },
-  "homepage": "https://github.com/Team-InfraMorph/demo-app#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-secrets-manager": "^3.0.0",
     "@prisma/client": "6.19.3",
     "dotenv": "16.6.1",
-    "express": "4.22.3"
+    "express": "4.22.3",
+    "pg": "^8.13.0"
+  },
+  "engines": {
+    "node": ">=22 <23"
   },
   "devDependencies": {
     "prisma": "6.19.3"
